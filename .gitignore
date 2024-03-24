@@ -161,3 +161,4 @@ cython_debug/
 
 code/__pycache__
 code/Dataset/
+code/pruebas.py

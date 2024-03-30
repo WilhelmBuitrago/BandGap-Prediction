@@ -3,6 +3,8 @@ from utils import download_from_drive, unzip
 import pandas as pd
 import numpy as np
 from typing import Union
+from tqdm import tqdm
+import ast
 
 
 class GetDataset():
@@ -11,14 +13,16 @@ class GetDataset():
     def __init__(self,
                  id: str = "1Tb18Pz3Z1E5dGurvnE3Zv8z0516WHRGn",
                  seed: int = 42,
+                 CreateDataFrame:bool = False,
+                 Visualize_DataFrame:bool = False,
                  **args):
 
         self.seed = seed
         self.__id = id
         self.__folder = os.path.join(os.path.dirname(__file__),
                                      'Dataset')
-        self.visualize_dataframe = args.get("VisualizateDataframe")
-        self.createDataframe = args.get("CreateDataframe", False)
+        self.visualize_dataframe = Visualize_DataFrame
+        self.createDataframe = CreateDataFrame
         self.args = args
 
         if not GetDataset.already_unzipped:
@@ -29,12 +33,9 @@ class GetDataset():
         dff = self.ConcatDataset(self.createDataframe)
 
         if self.visualize_dataframe:
-            if len(self.args["VisualizateDataframe"]) < 2 or len(self.args["VisualizateDataframe"]) > 2:
-                raise ValueError(
-                    "El argumento 'VisualizateDataframe' toma unica y exactamente dos valores [True/False, 'head'/'tail']")
-            if self.args["VisualizateDataframe"][0]:
-                self.Visualizate(
-                    df=dff, mode=self.args["VisualizateDataframe"][1], cant=10)
+            mode = self.args.get("mode","head")
+            self.Visualizate(
+                df=dff, mode=mode, cant=10)
 
         if isinstance(dff, list):
             datas_arrays = []
@@ -44,19 +45,20 @@ class GetDataset():
                 N = self.__len__(dfs)
                 Predictors = 2
                 targets = 1
-
-                G_x1 = len(eval(dfs['x1'][0]))
-                G_x2 = len(eval(dfs['x2'][0]))
+                dfs['x1'] = dfs['x1'].apply(ast.literal_eval)
+                dfs['x2'] = dfs['x2'].apply(ast.literal_eval)
+                G_x1 = len(dfs['x1'][0])
+                G_x2 = len(dfs['x2'][0])
                 G = max(G_x1, G_x2)
 
                 data_array = np.zeros((N, Predictors, G))
                 target_array = np.zeros((N, targets))
 
                 for i in range(N):
-                    data_array[i, 0, :G] = eval(dfs['x1'][i])
-                    data_array[i, 1, :G] = eval(dfs['x2'][i])
+                    data_array[i, 0, :G] = dfs['x1'][i]
+                    data_array[i, 1, :G] = dfs['x2'][i]
                     target_array[i, 0] = float(dfs['band_gap_mean'][i])
-
+                target_array = target_array.reshape(target_array.shape[0])
                 datas_arrays.append(data_array)
                 targets_arrays.append(target_array)
             return datas_arrays, targets_arrays
@@ -65,18 +67,20 @@ class GetDataset():
             N = self.__len__(dff)
             Predictors = 2
             targets = 1
-
-            G_x1 = len(eval(dff['x1'][0]))
-            G_x2 = len(eval(dff['x2'][0]))
+            dff['x1'] = dff['x1'].apply(ast.literal_eval)
+            dff['x2'] = dff['x2'].apply(ast.literal_eval)
+            G_x1 = len(dff['x1'][0])
+            G_x2 = len(dff['x2'][0])
             G = max(G_x1, G_x2)
 
             data_array = np.zeros((N, Predictors, G))
             target_array = np.zeros((N, targets))
 
             for i in range(N):
-                data_array[i, 0, :G] = eval(dff['x1'][i])
-                data_array[i, 1, :G] = eval(dff['x2'][i])
+                data_array[i, 0, :G] = dff['x1'][i]
+                data_array[i, 1, :G] = dff['x2'][i]
                 target_array[i, 0] = float(dff['band_gap_mean'][i])
+            target_array = target_array.reshape(target_array.shape[0])
             return data_array, target_array
 
     def __set_env(self):
@@ -135,5 +139,5 @@ class GetDataset():
 
 if __name__ == '__main__':
     data, target = GetDataset().Outputdata()
-    print(data[1][-1][0])
-    print(target[1][-1])
+    print(data[1].shape)
+    print(target[1].shape)
